@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest_costos.json">
+    <meta name="theme-color" content="#4a148c">
+    <title>Calculadora de Producción</title>
+    <style>
+        :root { --p-color: #4a148c; --bg: #f8f9fa; --u-color: #0d47a1; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 10px; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; }
+        
+        /* Franja Violeta con Engranaje Integrado */
+        .header-strip { 
+            background-color: var(--p-color); 
+            height: 40px; 
+            border-radius: 8px; 
+            margin-bottom: 15px; 
+            display: flex; 
+            align-items: center; 
+            padding: 0 15px; 
+            position: relative;
+        }
+        .settings-gear { 
+            cursor: pointer; 
+            color: rgba(255,255,255,0.7); 
+            font-size: 20px; 
+            transition: 0.3s; 
+        }
+        .settings-gear:hover { color: white; }
+
+        /* Panel Flotante */
+        .logo-config-panel { 
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 15px; 
+            background: white; 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            z-index: 101; 
+        }
+        .logo-config-panel label { font-size: 11px; font-weight: bold; color: #999; display: block; margin-bottom: 5px; }
+
+        .logo-full-width { width: 100%; text-align: center; margin-bottom: 10px; }
+        #logo-preview { max-width: 160px; max-height: 80px; object-fit: contain; }
+
+        /* Título solo para impresión */
+        .solo-print-text { display: none; }
+
+        .header-info-print { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .header-info-print > div { flex: 1; min-width: 180px; }
+
+        h2 { border-bottom: 2px solid #ddd; padding-bottom: 3px; font-size: 0.95em; text-transform: uppercase; color: var(--p-color); margin-top: 15px; }
+
+        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        @media (max-width: 600px) { .grid-inputs { grid-template-columns: 1fr; } }
+
+        .input-group { display: flex; flex-direction: column; margin-bottom: 8px; }
+        label { font-weight: bold; color: #555; margin-bottom: 2px; font-size: 0.75em; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: #fff; text-align: right; }
+        
+        .res-valor { padding: 8px; border-radius: 6px; font-weight: bold; text-align: right; font-size: 15px; }
+        .res-blue { background-color: #e3f2fd; color: #0d47a1; }
+        .res-green { background-color: #e8f5e9; color: #1b5e20; }
+        .res-purple { background-color: #f3e5f5; color: #4a148c; }
+
+        .material-selector { background: #f3e5f5; padding: 10px; border-radius: 10px; margin-top: 8px; border: 1px solid #e1bee7; }
+        .material-option { display: grid; grid-template-columns: 25px 1fr 120px; align-items: center; gap: 5px; margin-bottom: 5px; padding: 3px; border-bottom: 1px solid #e1bee7; }
+        
+        .total-box { background: #e8f5e9; padding: 15px; border-radius: 12px; text-align: right; border: 2px solid #c8e6c9; margin-top: 10px; }
+        .total-val { font-size: 26px; font-weight: bold; color: #1b5e20; }
+        .unitario-val { color: var(--u-color); font-weight: bold; font-size: 18px; margin-top: 2px; }
+        
+        .ajuste-info { font-size: 0.8em; font-weight: bold; padding: 4px; border-radius: 4px; margin-bottom: 5px; display: inline-block; }
+        .recargo { background: #fff5f5; color: #c53030; }
+        .descuento { background: #f0fff4; color: #2f855a; }
+
+        .firma-y-datos { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .footer-datos { display: none; text-align: left; font-size: 6.5pt; color: #444; line-height: 1.2; flex: 1; }
+        .firma-container { display: none; text-align: center; flex: 1; }
+        .firma-linea { border-top: 1.5px solid #333; width: 200px; margin-left: auto; padding-top: 5px; font-weight: bold; font-size: 9pt; }
+
+        @media print {
+            .no-print, button, .header-strip, .logo-config-panel, .material-selector, h2, hr, .extra-oculto, .recargo { display: none !important; }
+            body { padding: 0; background: white; }
+            .container { box-shadow: none; border: none; padding: 0; width: 100%; }
+            .firma-y-datos { display: flex !important; }
+            .footer-datos { display: block !important; }
+            .firma-container { display: block !important; }
+            input { border: none !important; background: transparent !important; font-size: 11pt !important; padding: 0 !important; text-align: left; }
+            .total-box { border: none; background: none; padding: 0; margin-top: 10px; }
+            .solo-print-text { display: block !important; text-align: center; margin-bottom: 15px; }
+            .solo-print-text h1 { margin: 0; font-size: 1.4em; color: #cccccc; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-strip no-print">
+        <span class="settings-gear" onclick="toggleConfig()">⚙</span>
+        <div id="config-panel" class="logo-config-panel">
+            <label>Configurar Logo:</label>
+            <input type="file" accept="image/*" onchange="saveLogo(this)">
+        </div>
+    </div>
+
+    <div class="logo-full-width"><img id="logo-preview" src="" style="display:none"></div>
+
+    <div class="solo-print-text">
+        <h1>PROFORMA</h1>
+    </div>
+
+    <div class="header-info-print">
+        <div><label>CLIENTE:</label><input type="text" id="c_nom" placeholder="..."></div>
+        <div><label>RUC / CI:</label><input type="text" id="c_ruc" placeholder="..."></div>
+        <div><label>FECHA:</label><input type="text" id="fecha"></div>
+    </div>
+
+    <div class="no-print">
+        <h2>1. Datos de Producción</h2>
+        <div class="grid-inputs">
+            <div class="input-group"><label>Medida Bloque (cm):</label><input type="number" id="cm_bloque" value="22.25" oninput="calc()"></div>
+            <div class="input-group"><label>Etiq. por Bloque:</label><input type="number" id="etiq_bloque" value="6" oninput="calc()"></div>
+            <div class="input-group"><label>TOTAL etiquetas:</label><input type="number" id="tot_etiq" value="5000" oninput="calc()"></div>
+            <div class="input-group"><label>Ancho Material (cm):</label><input type="number" id="ancho_cm" value="10" oninput="calc()"></div>
+        </div>
+
+        <h2>2. Resultados Real</h2>
+        <div class="grid-inputs">
+            <div class="input-group"><label>Bloques:</label><div id="res_bloques" class="res-valor res-blue">0</div></div>
+            <div class="input-group"><label>Lineal (cm):</label><div id="res_cm" class="res-valor res-blue">0</div></div>
+            <div class="input-group"><label>Superficie (cm²):</label><div id="res_area_cm2" class="res-valor res-purple">0</div></div>
+            <div class="input-group"><label>Metros (m):</label><div id="res_metros" class="res-valor res-green">0</div></div>
+            <div class="input-group"><label>Pies (ft):</label><div id="res_pies" class="res-valor res-green">0</div></div>
+        </div>
+
+        <h2>3. Material y Costos Extra</h2>
+        <div class="material-selector">
+            <div class="material-option"><input type="radio" name="mat" id="radio_manual" checked onclick="calc()"><span>MANUAL</span><input type="number" id="val_manual" value="0.000439" step="0.00000001" oninput="calc()"></div>
+            <div class="material-option"><input type="radio" name="mat" id="r1" onclick="calc()"><span>PoliP Blanco</span><input type="number" id="v1" value="0.00015783" step="0.00000001" oninput="calc()"></div>
+            <div class="material-option"><input type="radio" name="mat" id="r2" onclick="calc()"><span>PoliP Transparente</span><input type="number" id="v2" value="0.00015783" step="0.00000001" oninput="calc()"></div>
+            <div class="material-option"><input type="radio" name="mat" id="r3" onclick="calc()"><span>PoliP Metalizado</span><input type="number" id="v3" value="0.00023805" step="0.00000001" oninput="calc()"></div>
+            <div class="material-option"><input type="radio" name="mat" id="r4" onclick="calc()"><span>Propalcote Blanco</span><input type="number" id="v4" value="0.0001669" step="0.00000001" oninput="calc()"></div>
+            <div class="material-option"><input type="radio" name="mat" id="r5" onclick="calc()"><span>Propalcote Metalizado</span><input type="number" id="v5" value="0.0002169" step="0.00000001" oninput="calc()"></div>
+        </div>
+        
+        <div class="grid-inputs" style="margin-top:10px;">
+            <div class="input-group extra-oculto"><label>Troquel/Extra $:</label><input type="number" id="costo_extra" value="0.0" step="0.1" oninput="calc()"></div>
+            <div class="input-group"><label>IVA (%):</label><input type="number" id="iva_p" value="15" oninput="calc()"></div>
+        </div>
+    </div>
+
+    <h2>Resumen de Cotización</h2>
+    <div class="total-box">
+        <div id="msg_ajuste" class="ajuste-info"></div>
+        <div id="imp_detalles" style="text-align:left; font-size:13px; margin-bottom:5px;"></div>
+        <hr style="border: 0; border-top: 1px solid #ccc; margin: 8px 0;">
+        <div style="font-size:16px">SUBTOTAL: <span id="res_subtotal">$ 0.00</span></div>
+        <div style="font-size:12px" id="label_iva">IVA: $ 0.00</div>
+        <div class="total-val" id="res_total">$ 0.00</div>
+        <div class="unitario-val">Costo Unitario: <span id="res_unitario">$ 0.0000</span></div>
+    </div>
+
+    <div class="firma-y-datos">
+        <div class="footer-datos">
+            Dir.: Av Atahualpa y García Mogrovejo esq.<br>
+            Cel.: 0987084163<br>
+            Ambato - Ecuador
+        </div>
+        <div class="firma-container">
+            <div class="firma-linea">FIRMA DE GERENCIA</div>
+        </div>
+    </div>
+</div>
+
+<button class="btn-print no-print" onclick="window.print()" style="background:var(--p-color); color:white; border:none; width:100%; max-width:800px; display:block; margin: 15px auto; padding:18px; border-radius:12px; font-weight:bold; font-size:18px; cursor:pointer;">🖨️ IMPRIMIR PROFORMA</button>
+
+<script>
+    window.onload = () => {
+        const saved = localStorage.getItem('cirel_logo_permanente');
+        if(saved) { 
+            document.getElementById('logo-preview').src = saved; 
+            document.getElementById('logo-preview').style.display = 'block'; 
+        }
+        document.getElementById('fecha').value = new Date().toLocaleDateString();
+        calc();
+    };
+
+    function toggleConfig() {
+        const panel = document.getElementById('config-panel');
+        panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function saveLogo(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                localStorage.setItem('cirel_logo_permanente', e.target.result);
+                document.getElementById('logo-preview').src = e.target.result;
+                document.getElementById('logo-preview').style.display = 'block';
+                document.getElementById('config-panel').style.display = 'none';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    window.onclick = function(event) {
+        if (!event.target.matches('.settings-gear') && !event.target.closest('#config-panel')) {
+            document.getElementById('config-panel').style.display = 'none';
+        }
+    }
+
+    function calc() {
+        const cmB = parseFloat(document.getElementById('cm_bloque').value) || 0;
+        const etB = parseFloat(document.getElementById('etiq_bloque').value) || 0;
+        const totE = parseFloat(document.getElementById('tot_etiq').value) || 0;
+        const ancho = parseFloat(document.getElementById('ancho_cm').value) || 0;
+        const extra = parseFloat(document.getElementById('costo_extra').value) || 0;
+        const ivaP = parseFloat(document.getElementById('iva_p').value) || 0;
+        
+        let costoBase = 0;
+        const sel = document.querySelector('input[name="mat"]:checked');
+        if (sel.id === 'radio_manual') costoBase = parseFloat(document.getElementById('val_manual').value);
+        else {
+            const valId = 'v' + sel.id.substring(1);
+            costoBase = parseFloat(document.getElementById(valId).value);
+        }
+
+        if (etB <= 0 || totE <= 0) return;
+
+        let factorAjuste = 1.0;
+        let mensaje = "";
+        let claseAjuste = "";
+
+        if (totE <= 3000) { factorAjuste = 1.25; mensaje = "⚠️ Recargo del 25% (Cantidad mínima)"; claseAjuste = "recargo"; }
+        else if (totE <= 5000) { factorAjuste = 1.15; mensaje = "⚠️ Recargo del 15% (Cantidad media)"; claseAjuste = "recargo"; }
+        else if (totE >= 50000) { factorAjuste = 0.85; mensaje = "✅ Descuento del 15% aplicado"; claseAjuste = "descuento"; }
+        else if (totE >= 25000) { factorAjuste = 0.90; mensaje = "✅ Descuento del 10% aplicado"; claseAjuste = "descuento"; }
+
+        const bloques = totE / etB;
+        const totalCm = bloques * cmB;
+        const areaCm2 = totalCm * ancho;
+        
+        const subtotal = (areaCm2 * (costoBase * factorAjuste)) + extra;
+        const ivaVal = subtotal * (ivaP / 100);
+        const totalFinal = subtotal + ivaVal;
+        const unitario = totalFinal / totE;
+
+        document.getElementById('res_bloques').textContent = bloques.toFixed(2);
+        document.getElementById('res_cm').textContent = totalCm.toFixed(2) + " cm";
+        document.getElementById('res_area_cm2').textContent = areaCm2.toFixed(2) + " cm²";
+        document.getElementById('res_metros').textContent = (totalCm/100).toFixed(2) + " m";
+        document.getElementById('res_pies').textContent = (totalCm/30.48).toFixed(2) + " ft";
+
+        const msgBox = document.getElementById('msg_ajuste');
+        msgBox.textContent = mensaje;
+        msgBox.className = "ajuste-info " + claseAjuste;
+        msgBox.style.display = mensaje ? "inline-block" : "none";
+
+        document.getElementById('imp_detalles').innerHTML = `<b>Cantidad:</b> ${totE} etiquetas | <b>Metraje:</b> ${(totalCm/100).toFixed(2)} m | <b>Área:</b> ${areaCm2.toFixed(2)} cm²`;
+        document.getElementById('res_subtotal').textContent = `$ ${subtotal.toFixed(2)}`;
+        document.getElementById('label_iva').textContent = `IVA (${ivaP}%): $ ${ivaVal.toFixed(2)}`;
+        document.getElementById('res_total').textContent = `$ ${totalFinal.toFixed(2)}`;
+        document.getElementById('res_unitario').textContent = `$ ${unitario.toFixed(4)}`;
+    }
+    // Registro del Service Worker para hacerla instalable
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(reg => console.log('App lista para instalar'))
+    .catch(err => console.log('Error de registro', err));
+}
+
+</script>
+</body>
+</html>
